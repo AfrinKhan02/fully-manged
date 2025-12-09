@@ -50,6 +50,10 @@ The application will automatically load this file if it exists. `secret.env` is 
 | `GROUP_ID` | Consumer Group ID | `connect-log-consumer-group` |
 | `CONSUME_FROM_START` | Consume from beginning | `false` |
 
+## Consumption Behavior
+
+On startup, the application will automatically seek to the **last 3 logs** of each partition and continue consuming new messages from there. This ensures you see recent context without processing the entire topic history.
+
 ## Run Locally
 
 You can run the application using `java -jar` or `mvn spring-boot:run`.
