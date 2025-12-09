@@ -40,6 +40,24 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <jvmArguments>
+                        -javaagent:opentelemetry-javaagent.jar
+                        -XX:MaxRAMPercentage=75
+                        -XX:+UseParallelGC
+                        -XX:ActiveProcessorCount=1
+                        -Djdk.virtualThreadScheduler.parallelism=20
+                        --add-opens java.base/java.time=ALL-UNNAMED
+                        -Djava.security.egd=file:/dev/./urandom
+                        -Dotel.logs.exporter=otlp
+                        -Dotel.metrics.exporter=otlp
+                        -Dotel.traces.exporter=otlp
+                        -Dotel.exporter.otlp.endpoint=https://otel-eur.michelin.com:443
+                        -Dotel.exporter.otlp.headers=x-scope-orgid=default
+                        -Dotel.resource.attributes=service.name=fully-managed-connectors-consumer,service.namespace=kafka,environment=dev
+                        -Dotel.javaagent.debug=false
+                    </jvmArguments>
+                </configuration>
             </plugin>
         </plugins>
     </build>

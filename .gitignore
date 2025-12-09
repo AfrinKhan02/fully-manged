@@ -39,5 +39,9 @@ Thumbs.db
 *.tar.gz
 *.rar
 
+# Secrets
+secret.env
+local.properties
+
 # Exceptions (if you want to commit the agent, uncomment the next line)
-# !opentelemetry-javaagent.jar
+!opentelemetry-javaagent.jar

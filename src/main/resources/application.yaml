@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: optional:file:./secret.env[.properties]
   kafka:
     bootstrap-servers: ${BOOTSTRAP_SERVERS:pkc-4ywp7.us-west-2.aws.confluent.cloud:9092}
     consumer:
