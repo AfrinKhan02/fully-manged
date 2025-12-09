@@ -1,0 +1,43 @@
+.archive
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+# dependency-reduced-pom.xml
+buildNumber
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.properties
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.factorypath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Java
+*.class
+*.log
+*.ctxt
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Exceptions (if you want to commit the agent, uncomment the next line)
+# !opentelemetry-javaagent.jar

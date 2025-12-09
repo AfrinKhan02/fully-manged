@@ -1,0 +1,25 @@
+spring:
+  kafka:
+    bootstrap-servers: ${BOOTSTRAP_SERVERS:pkc-4ywp7.us-west-2.aws.confluent.cloud:9092}
+    consumer:
+      group-id: ${GROUP_ID:connect-log-consumer-group}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    properties:
+      security.protocol: SASL_SSL
+      sasl.mechanism: PLAIN
+      sasl.jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username='${CLUSTER_API_KEY}' password='${CLUSTER_API_SECRET}';
+      client.dns.lookup: use_all_dns_ips
+      session.timeout.ms: 45000
+
+connect:
+  logs:
+    topic: ${TOPIC_NAME:confluent-connect-log-events}
+
+logging:
+  level:
+    root: INFO
+    com.michelin.af.connector: INFO
+
+
