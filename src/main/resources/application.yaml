@@ -16,10 +16,9 @@ spring:
 connect:
   logs:
     topic: ${TOPIC_NAME:confluent-connect-log-events}
+    consume-from-start: ${CONSUME_FROM_START:false}
 
 logging:
   level:
     root: INFO
     com.michelin.af.connector: INFO
-
-

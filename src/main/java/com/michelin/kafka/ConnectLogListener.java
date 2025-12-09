@@ -11,7 +11,7 @@ public class ConnectLogListener {
 
     private static final Logger logger = LoggerFactory.getLogger(ConnectLogListener.class);
 
-    @KafkaListener(topics = "${connect.logs.topic}", groupId = "${spring.kafka.consumer.group-id}")
+    @KafkaListener(topics = "${connect.logs.topic}", groupId = "#{@effectiveGroupId}")
     public void listen(ConsumerRecord<String, String> record) {
         // Log the record value. OTel agent will pick this up from the logs.
         logger.info("Received Connect Log Event: key={}, value={}, partition={}, offset={}", 
