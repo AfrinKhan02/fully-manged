@@ -37,6 +37,11 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+            <version>1.38.0</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -60,6 +65,7 @@
                         -Dotel.exporter.otlp.headers=x-scope-orgid=default
                         -Dotel.resource.attributes=service.name=fully-managed-connectors-consumer,service.namespace=kafka,environment=dev
                         -Dotel.javaagent.debug=false
+                        -Dotel.instrumentation.logback-appender.enabled=false
                     </jvmArguments>
                 </configuration>
             </plugin>
