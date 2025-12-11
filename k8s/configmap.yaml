@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fully-managed-connectors-consumer-config
+  labels:
+    app: fully-managed-connectors-consumer
+data:
+  BOOTSTRAP_SERVERS: "pkc-4ywp7.us-west-2.aws.confluent.cloud:9092"
+  TOPIC_NAME: "confluent-connect-log-events"
+  GROUP_ID: "connect-log-consumer-group"
+  CONSUME_FROM_START: "false"
+

@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: fully-managed-connectors-consumer
+  name: fully-managed-connectors-consumer-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fully-managed-connectors-consumer
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: fully-managed-connectors-consumer
+    spec:
+      containers:
+        - name: fully-managed-connectors-consumer
+          image: image_placeholder
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          resources:
+            limits:
+              cpu: "500m"
+              memory: 1536Mi
+            requests:
+              cpu: "250m"
+              memory: 768Mi
+          env:
+            # JVM Options including OpenTelemetry agent
+            - name: JAVA_OPTS
+              value: "-XX:MaxRAMPercentage=75 -XX:+UseParallelGC -XX:ActiveProcessorCount=1 -Djdk.virtualThreadScheduler.parallelism=20 --add-opens java.base/java.time=ALL-UNNAMED -Djava.security.egd=file:/dev/./urandom"
+            - name: JAVA_OPTS_OTEL
+              value: "-javaagent:opentelemetry-javaagent.jar -Dotel.logs.exporter=otlp -Dotel.metrics.exporter=otlp -Dotel.traces.exporter=otlp -Dotel.exporter.otlp.endpoint=https://otel-eur.michelin.com:443 -Dotel.exporter.otlp.headers=x-scope-orgid=default -Dotel.resource.attributes=service.name=fully-managed-connectors-consumer,service.namespace=kafka,environment=dev -Dotel.javaagent.debug=false"
+          envFrom:
+            - configMapRef:
+                name: fully-managed-connectors-consumer-config
+            - secretRef:
+                name: fully-managed-connectors-consumer-secrets
+

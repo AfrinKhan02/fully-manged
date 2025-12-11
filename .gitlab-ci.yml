@@ -1,0 +1,167 @@
+include:
+  # https://gitlab.michelin.com/devops-foundation/shared-ci/maven/maven-build
+  - "https://gitlab.michelin.com/api/v4/projects/33347/repository/files/maven_build_container.yml/raw?ref=1.1.0&private_token=$SHARED_CI_TOKEN&.yaml"
+  # https://gitlab.michelin.com/devops-foundation/shared-ci/docker/docker-build
+  - "https://gitlab.michelin.com/api/v4/projects/35474/repository/files/docker_build.yml/raw?ref=1.0.2&private_token=$SHARED_CI_TOKEN&.yaml"
+  # https://gitlab.michelin.com/devops-foundation/shared-ci/k8s/k8s-deploy
+  - "https://gitlab.michelin.com/api/v4/projects/35479/repository/files/k8s_deploy.yml/raw?ref=main&private_token=$SHARED_CI_TOKEN&.yaml"
+
+variables:
+  TRIGRAM: KFE
+  ENTITY: dcti-bs-smi
+  VARIABLES_FILE: ./variables.txt
+  IMAGE_PATH: fully-managed-connectors-consumer # Adjust if needed
+
+stages:
+  - build
+  - docker
+  - promote
+  - deploy
+  - release
+
+# ####################################################################
+# building maven for adding all dependencies of the java application #
+# ####################################################################
+⛏ build-maven:
+  stage: build
+  extends: .maven-build
+  script:
+    - APP_VERSION=$(mvn org.apache.maven.plugins:maven-help-plugin:3.1.0:evaluate -Dexpression=project.version -q -DforceStdout)
+    - echo "export APP_VERSION=$APP_VERSION" > $VARIABLES_FILE
+    - mvn $MAVEN_CLI_OPTS clean install -U
+    - mvn dependency:resolve
+    - mvn dependency:tree
+    # Copy or download the opentelemetry agent to target/ so Dockerfile can pick it up
+    # If using the local one committed to git:
+    - cp opentelemetry-javaagent.jar target/
+    # Or download the latest:
+    # - curl -L -o $CI_PROJECT_DIR/target/opentelemetry-javaagent.jar $OTEL_DOWNLOAD_URL
+  artifacts:
+    expire_in: 4h
+    paths:
+      - $CI_PROJECT_DIR/target
+      - $VARIABLES_FILE
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: ($CI_COMMIT_BRANCH == "main" && $CI_COMMIT_MESSAGE !~ /^\[maven-release-plugin\].*/)
+
+###############################################
+# building docker image for deployment in k8s #
+###############################################
+📦 docker-build:
+  extends: .docker-build
+  variables:
+    REGISTRY_DESTINATION: $DOCKER_TEAM_RELEASE_REGISTRY/$IMAGE_PATH
+    DOCKER_TEAM_REGISTRY: $DOCKER_TEAM_RELEASE_REGISTRY
+    container : kube
+  script:
+    - source $VARIABLES_FILE
+    - |
+      if [ $CI_COMMIT_TAG ]; then
+        IMAGE_DESTINATION=$REGISTRY_DESTINATION:$APP_VERSION
+      else
+        IMAGE_DESTINATION=$REGISTRY_DESTINATION:$APP_VERSION-$CI_COMMIT_SHORT_SHA
+      fi
+    - echo IMAGE_DESTINATION=$IMAGE_DESTINATION
+    - echo KANIKO_IMAGE_TARGET=$KANIKO_IMAGE_TARGET
+    - echo "{\"auths\":{\"$DOCKER_TEAM_REGISTRY\":{\"username\":\"$ARTIFACTORY_USER\",\"password\":\"$ARTIFACTORY_TOKEN\"}}}"
+    - !reference [.docker-build, script]
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: ($CI_COMMIT_BRANCH == "main" && $CI_COMMIT_MESSAGE !~ /^\[maven-release-plugin\].*/)
+      variables:
+        REGISTRY_DESTINATION: $DOCKER_TEAM_RELEASE_REGISTRY/$IMAGE_PATH
+        DOCKER_TEAM_REGISTRY: $DOCKER_TEAM_RELEASE_REGISTRY
+  needs:
+    - ⛏ build-maven
+
+###################################################
+# deploy the docker image in k8s dev/prod cluster #
+###################################################
+deploy_k8s:
+  extends: .deploy-k8s
+  variables:
+    ENVIRONMENT: "prod"
+    REGISTRY_DESTINATION: $DOCKER_PROD_REGISTRY/$IMAGE_PATH
+  script:
+    - source $VARIABLES_FILE
+    - |
+      if [ $CI_COMMIT_TAG ]; then
+        IMAGE_TO_DEPLOY=$REGISTRY_DESTINATION:$APP_VERSION
+      else
+        IMAGE_TO_DEPLOY=$REGISTRY_DESTINATION:$APP_VERSION-$CI_COMMIT_SHORT_SHA
+      fi
+      K8S_IMAGE_PLACEHOLDER="image_placeholder=$IMAGE_TO_DEPLOY"
+    - !reference [.deploy-k8s, script]
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: ($CI_COMMIT_BRANCH == "main" && $CI_COMMIT_MESSAGE !~ /^\[maven-release-plugin\].*/)
+      variables:
+        ENVIRONMENT: "dev"
+        REGISTRY_DESTINATION: $DOCKER_TEAM_RELEASE_REGISTRY/$IMAGE_PATH
+  needs:
+    - ⛏ build-maven
+    - 📦 docker-build
+  when: manual
+
+##################################
+# Release the deployment in prod #
+##################################
+git-release:
+  stage: release
+  image:
+    name: docker.artifactory.michelin.com/michelin/hub/eclipse-temurin21-jdk-alpine-maven:bib-1.11
+  script:
+    - apk add git
+    - git config --global user.email "$GITLAB_USER_EMAIL"
+    - git config --global user.name "$GITLAB_USER_NAME"
+    - FINAL_VERSION=$(date +"%Y.%-m.%-d")-$CI_COMMIT_SHORT_SHA
+    - echo "Prepare for version $FINAL_VERSION"
+    - git fetch
+    - git stash push -m "CI auto stash before checkout"
+    - git checkout $CI_COMMIT_REF_NAME
+    - git stash pop
+    # Set version to release branch version forced
+    - mvn -Dmaven.repo.local=./.m2/repository/ versions:set -DnewVersion=$FINAL_VERSION -DgenerateBackupPoms=false -DprocessAllModules
+    - git add .
+    - git commit -m "Release $FINAL_VERSION"
+    - git push "https://gitlab-ci:${GITLAB_KFE_TOKEN}@${CI_REPOSITORY_URL#*@}" $CI_COMMIT_REF_NAME -o ci.skip
+    # Tag master, final version here
+    - git tag $FINAL_VERSION
+    - git push "https://gitlab-ci:${GITLAB_KFE_TOKEN}@${CI_REPOSITORY_URL#*@}" $FINAL_VERSION
+    # Rebase develop
+    - git checkout develop
+    - git pull --rebase origin $CI_COMMIT_REF_NAME
+    - git push "https://gitlab-ci:${GITLAB_KFE_TOKEN}@${CI_REPOSITORY_URL#*@}" develop -f -o ci.skip
+  rules:
+    - if: ($CI_COMMIT_BRANCH == "main" && $CI_COMMIT_MESSAGE !~ /^\[maven-release-plugin\].*/)
+  tags:
+    - k8s
+    - europe
+  when: manual
+
+########################################
+# Promote the deployment in production #
+########################################
+promote:
+  stage: promote
+  image:
+    name: $DOCKER_REGISTRY/k8s/tools/promote-artifact:1.3
+  variables:
+    ARTIFACTORY_TOKEN: $ARTIFACTORY_TOKEN
+    IMAGE_TO_PROMOTE: $IMAGE_PATH
+  script:
+    - source $VARIABLES_FILE
+    - >-
+      /promote.sh -i "$IMAGE_TO_PROMOTE:$APP_VERSION"
+      -a https://artifactory.michelin.com/api/plugins/execute/promote
+      -t "$ARTIFACTORY_TOKEN"
+      -f true
+      -k true
+  rules:
+    - if: $CI_COMMIT_TAG
+  needs:
+    - ⛏ build-maven
+    - 📦 docker-build
+  when: manual
+
