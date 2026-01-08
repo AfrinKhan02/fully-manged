@@ -15,7 +15,7 @@ public class ConnectLogConsumerApplication {
     }
 
     @Bean
-    public String effectiveGroupId(@Value("${connect.logs.consume-from-start:false}") boolean consumeFromStart,
+    public String effectiveGroupId(@Value("${connect.logs.consume-from-start}") boolean consumeFromStart,
                                    @Value("${spring.kafka.consumer.group-id}") String groupId) {
         if (consumeFromStart) {
             return groupId + "-" + UUID.randomUUID();
