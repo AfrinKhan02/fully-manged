@@ -37,6 +37,11 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+            <version>1.39.0</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -53,6 +58,9 @@
                         -Djdk.virtualThreadScheduler.parallelism=20
                         --add-opens java.base/java.time=ALL-UNNAMED
                         -Djava.security.egd=file:/dev/./urandom
+                        -Dotel.instrumentation.logback-appender.enabled=false
+                        -Dotel.instrumentation.log4j-appender.enabled=false
+                        -Dotel.instrumentation.jul.enabled=false
                         -Dotel.logs.exporter=otlp
                         -Dotel.metrics.exporter=otlp
                         -Dotel.traces.exporter=otlp
