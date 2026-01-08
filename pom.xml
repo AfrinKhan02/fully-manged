@@ -67,7 +67,7 @@
                         -Dotel.exporter.otlp.protocol=grpc
                         -Dotel.exporter.otlp.endpoint=https://otel-eur.michelin.com:443
                         -Dotel.exporter.otlp.headers=x-scope-orgid=default
-                        -Dotel.resource.attributes=service.name=fully-managed-connectors-consumer,service.namespace=kafka,environment=dev
+                        -Dotel.resource.attributes=service.name=fully-managed-connectors-consumer-v2,service.namespace=kafka,environment=dev
                         -Dotel.javaagent.debug=false
                     </jvmArguments>
                 </configuration>
