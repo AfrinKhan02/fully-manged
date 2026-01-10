@@ -69,8 +69,8 @@
                         -Dotel.exporter.otlp.headers=x-scope-orgid=default
                         -Dotel.resource.attributes=service.name=fully-managed-connectors-consumer,service.namespace=kafka,environment=dev
                         -Dotel.javaagent.debug=false
-                        -Dotel.blrp.schedule.delay=100
-                        -Dotel.blrp.max.queue.size=2048
+                        -Dotel.blrp.schedule.delay=1000
+                        -Dotel.blrp.max.queue.size=8192
                         -Dotel.blrp.max.export.batch.size=512
                     </jvmArguments>
                 </configuration>

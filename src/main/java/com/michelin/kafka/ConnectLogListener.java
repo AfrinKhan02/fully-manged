@@ -2,6 +2,7 @@ package com.michelin.kafka;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
@@ -52,16 +53,16 @@ public class ConnectLogListener {
             String level = dataNode.path("level").asText("INFO");
             String connectorId = dataNode.path("context").path("connectorId").asText("unknown");
             
-            // Build attributes
-            AttributesBuilder attributes = Attributes.builder()
-                .put("event_type", eventType)
-                .put("event_id", eventId)
-                .put("event_source", eventSource)
-                .put("event_time", eventTime)
-                .put("environment", environment)
-                .put("connector_id", connectorId)
-                .put("kafka_partition", record.partition())
-                .put("kafka_offset", record.offset());
+            // Construct the structured body
+            ObjectNode logBody = objectMapper.createObjectNode();
+            logBody.put("event_type", eventType);
+            logBody.put("event_id", eventId);
+            logBody.put("event_source", eventSource);
+            logBody.put("event_time", eventTime);
+            logBody.put("environment", environment);
+            logBody.put("connector_id", connectorId);
+            logBody.put("kafka_partition", record.partition());
+            logBody.put("kafka_offset", record.offset());
 
             String message = "Connect Log Event";
             
@@ -73,28 +74,23 @@ public class ConnectLogListener {
                     String errorMsg = errorSummary.path("message").asText("");
                     String rootCause = errorSummary.path("rootCause").asText("");
                     
-                    attributes.put("connector_error_message", errorMsg);
-                    attributes.put("connector_error_root_cause", rootCause);
+                    logBody.put("connector_error_message", errorMsg);
+                    logBody.put("connector_error_root_cause", rootCause);
                     message = errorMsg.isEmpty() ? message : errorMsg;
                 }
             }
+            
+            // Add the human-readable message as well
+            logBody.put("message", message);
 
             // Map level to Severity
             Severity severity = mapSeverity(level);
             
-            // Build final attributes
-            Attributes builtAttributes = attributes.build();
-
-            // Log what we are sending locally
-            logger.info("Sending OTel Log - EventID: {}, Severity: {}, Message: {}", eventId, severity, message);
-            logger.debug("OTel Attributes: {}", builtAttributes);
-            
-            // Emit OTel log
+            // Emit OTel log with JSON Body
             otelLogger.logRecordBuilder()
                 .setSeverity(severity)
                 .setSeverityText(level)
-                .setBody(message)
-                .setAllAttributes(builtAttributes)
+                .setBody(objectMapper.writeValueAsString(logBody))
                 .emit();
 
             logger.info("OTel log emitted successfully for event: {}", eventId);
