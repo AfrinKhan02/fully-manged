@@ -12,12 +12,19 @@ import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 @Service
 public class ConnectLogListener {
 
     private static final Logger logger = LoggerFactory.getLogger(ConnectLogListener.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private final io.opentelemetry.api.logs.Logger otelLogger;
+    
+    // Pattern to extract environment from source string like:
+    // crn://confluent.cloud/environment=env-mwvgw/kafka=lkc-kz3jm/connector=lcc-8wypzm
+    private static final Pattern ENV_PATTERN = Pattern.compile("environment=([^/]+)");
 
     public ConnectLogListener() {
         this.otelLogger = GlobalOpenTelemetry.get().getLogsBridge().get("com.michelin.kafka.ConnectLogListener");
@@ -39,6 +46,7 @@ public class ConnectLogListener {
             String eventId = rootNode.path("id").asText("unknown");
             String eventSource = rootNode.path("source").asText("unknown");
             String eventTime = rootNode.path("time").asText();
+            String environment = extractEnvironment(eventSource);
             
             JsonNode dataNode = rootNode.path("data");
             String level = dataNode.path("level").asText("INFO");
@@ -46,13 +54,14 @@ public class ConnectLogListener {
             
             // Build attributes
             AttributesBuilder attributes = Attributes.builder()
-                .put("event.type", eventType)
-                .put("event.id", eventId)
-                .put("event.source", eventSource)
-                .put("event.time", eventTime)
-                .put("connector.id", connectorId)
-                .put("kafka.partition", record.partition())
-                .put("kafka.offset", record.offset());
+                .put("event_type", eventType)
+                .put("event_id", eventId)
+                .put("event_source", eventSource)
+                .put("event_time", eventTime)
+                .put("environment", environment)
+                .put("connector_id", connectorId)
+                .put("kafka_partition", record.partition())
+                .put("kafka_offset", record.offset());
 
             String message = "Connect Log Event";
             
@@ -64,8 +73,8 @@ public class ConnectLogListener {
                     String errorMsg = errorSummary.path("message").asText("");
                     String rootCause = errorSummary.path("rootCause").asText("");
                     
-                    attributes.put("connector.error.message", errorMsg);
-                    attributes.put("connector.error.root_cause", rootCause);
+                    attributes.put("connector_error_message", errorMsg);
+                    attributes.put("connector_error_root_cause", rootCause);
                     message = errorMsg.isEmpty() ? message : errorMsg;
                 }
             }
@@ -93,6 +102,15 @@ public class ConnectLogListener {
         } catch (Exception e) {
             logger.error("Failed to parse/process connect log event", e);
         }
+    }
+
+    private String extractEnvironment(String source) {
+        if (source == null) return "unknown";
+        Matcher matcher = ENV_PATTERN.matcher(source);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return "unknown";
     }
 
     private Severity mapSeverity(String level) {
