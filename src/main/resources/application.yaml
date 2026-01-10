@@ -22,5 +22,7 @@ connect:
 
 logging:
   level:
-    root: INFO
-    com.michelin.af.connector: INFO
+    root: WARN
+    org.apache.kafka: WARN
+    org.springframework.kafka: WARN
+    com.michelin.kafka: DEBUG

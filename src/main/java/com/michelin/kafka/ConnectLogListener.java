@@ -73,13 +73,22 @@ public class ConnectLogListener {
             // Map level to Severity
             Severity severity = mapSeverity(level);
             
+            // Build final attributes
+            Attributes builtAttributes = attributes.build();
+
+            // Log what we are sending locally
+            logger.info("Sending OTel Log - EventID: {}, Severity: {}, Message: {}", eventId, severity, message);
+            logger.debug("OTel Attributes: {}", builtAttributes);
+            
             // Emit OTel log
             otelLogger.logRecordBuilder()
                 .setSeverity(severity)
                 .setSeverityText(level)
                 .setBody(message)
-                .setAllAttributes(attributes.build())
+                .setAllAttributes(builtAttributes)
                 .emit();
+
+            logger.info("OTel log emitted successfully for event: {}", eventId);
 
         } catch (Exception e) {
             logger.error("Failed to parse/process connect log event", e);
