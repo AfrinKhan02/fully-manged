@@ -1,4 +1,4 @@
-package com.michelin.kafka;
+package com.michelin.kfe;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,7 +27,7 @@ public class ConnectLogListener {
     private static final Pattern CONN_PATTERN = Pattern.compile("connector=([^/]+)");
 
     public ConnectLogListener() {
-        this.otelLogger = GlobalOpenTelemetry.get().getLogsBridge().get("com.michelin.kafka.ConnectLogListener");
+        this.otelLogger = GlobalOpenTelemetry.get().getLogsBridge().get("com.michelin.kfe.ConnectLogListener");
     }
 
     @KafkaListener(topics = "${connect.logs.topic}", groupId = "#{@effectiveGroupId}")

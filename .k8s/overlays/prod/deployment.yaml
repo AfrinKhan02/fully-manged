@@ -1,0 +1,39 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fully-managed-connectors-consumer-deployment
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: fully-managed-connectors-consumer
+          resources:
+            limits:
+              memory: 1024Mi
+              cpu: 500m
+            requests:
+              memory: 512Mi
+              cpu: 250m
+          env:
+            - name: CLUSTER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: kafka-secret
+                  key: cluster_api_key
+            - name: CLUSTER_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: kafka-secret
+                  key: cluster_api_secret
+            - name: JAVA_TOOL_OPTIONS
+              value: >
+                -javaagent:opentelemetry-javaagent.jar 
+                -Dotel.traces.exporter=otlp 
+                -Dotel.logs.exporter=otlp 
+                -Dotel.metrics.exporter=otlp 
+                -Dotel.exporter.otlp.endpoint=https://otel.michelin.com:443
+                -Dotel.exporter.otlp.headers=x-scope-orgid=default
+                -Dotel.resource.attributes=environment=prod,service.namespace=prod,service.name=fully-managed-connectors-consumer,loki.resource.labels=service.namespace%2Cservice.name%2Cenvironment,loki.attribute.labels=service.namespace%2Cservice.name%2Cenvironment
+                -Dotel.javaagent.debug=false

@@ -1,4 +1,4 @@
-package com.michelin.kafka;
+package com.michelin.kfe;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;

@@ -1,0 +1,8 @@
+spring:
+  kafka:
+    bootstrap-servers: pkc-vr5y5.westeurope.azure.confluent.cloud:9092
+    consumer:
+      group-id: kfe.fully-managed-connectors-consumer-prod
+connect:
+  logs:
+    topic: confluent-connect-log-events

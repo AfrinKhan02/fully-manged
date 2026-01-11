@@ -25,4 +25,4 @@ logging:
     root: WARN
     org.apache.kafka: WARN
     org.springframework.kafka: WARN
-    com.michelin.kafka: DEBUG
+    com.michelin.kfe: DEBUG

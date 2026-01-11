@@ -1,0 +1,47 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fully-managed-connectors-consumer-deployment
+spec:
+  selector:
+    matchLabels:
+      app: fully-managed-connectors-consumer
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: fully-managed-connectors-consumer
+    spec:
+      containers:
+        - name: fully-managed-connectors-consumer
+          image: image_placeholder
+          ports:
+            - containerPort: 8080
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            failureThreshold: 12
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            periodSeconds: 3
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            periodSeconds: 3
+            failureThreshold: 5
+          volumeMounts:
+            - name: fully-managed-connectors-consumer-app-config
+              mountPath: "/home/k8s/config"
+              readOnly: true
+      volumes:
+        - name: fully-managed-connectors-consumer-app-config
+          configMap:
+            name: fully-managed-connectors-consumer-app-properties-map

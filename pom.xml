@@ -3,7 +3,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.michelin.kafka</groupId>
+  <groupId>com.michelin.kfe</groupId>
   <artifactId>fully-managed-connectors-consumer</artifactId>
   <version>1.0-SNAPSHOT</version>
 
@@ -67,7 +67,7 @@
                         -Dotel.exporter.otlp.protocol=grpc
                         -Dotel.exporter.otlp.endpoint=https://otel-eur.michelin.com:443
                         -Dotel.exporter.otlp.headers=x-scope-orgid=default
-                        -Dotel.resource.attributes=service.name=fully-managed-connectors-consumer-v8,service.namespace=kafka,environment=dev
+                        -Dotel.resource.attributes=service.name=fully-managed-connectors-consumer-v8,service.namespace=kfe,environment=dev
                         -Dotel.javaagent.debug=false
                     </jvmArguments>
                 </configuration>

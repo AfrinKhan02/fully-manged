@@ -1,4 +1,4 @@
-package com.michelin.kafka;
+package com.michelin.kfe;
 
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
@@ -15,7 +15,7 @@ public class TestController {
     private final Logger otelLogger;
 
     public TestController() {
-        this.otelLogger = GlobalOpenTelemetry.get().getLogsBridge().get("com.michelin.kafka.TestController");
+        this.otelLogger = GlobalOpenTelemetry.get().getLogsBridge().get("com.michelin.kfe.TestController");
     }
 
     @GetMapping("/test-log")

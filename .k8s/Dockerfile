@@ -23,7 +23,7 @@ ENTRYPOINT exec java -javaagent:/home/k8s/opentelemetry-javaagent.jar \
     -Dotel.exporter.otlp.protocol=grpc \
     -Dotel.exporter.otlp.endpoint=https://otel-eur.michelin.com:443 \
     -Dotel.exporter.otlp.headers=x-scope-orgid=default \
-    -Dotel.resource.attributes=service.name=fully-managed-connectors-consumer,service.namespace=kafka,environment=dev \
+    -Dotel.resource.attributes=service.name=fully-managed-connectors-consumer,service.namespace=kfe,environment=dev \
     -Dotel.javaagent.debug=false \
     -Dotel.blrp.schedule.delay=1000 \
     -Dotel.blrp.max.queue.size=8192 \

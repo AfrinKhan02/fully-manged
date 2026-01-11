@@ -11,6 +11,7 @@ include:
 stages:
   - build
   - docker
+  - deploy
 
 build:
   extends: .maven-build
@@ -24,14 +25,14 @@ docker:
   stage: docker
   extends: .docker-build
   variables:
-    IMAGE_DESTINATION: $DOCKER_SNAPSHOT_REGISTRY/kafka/fully-managed-connectors-consumer:1.0-SNAPSHOT
+    IMAGE_DESTINATION: $DOCKER_SNAPSHOT_REGISTRY/kfe/fully-managed-connectors-consumer:1.0-SNAPSHOT
   when: manual
 
 docker-prod:
   stage: docker
   extends: .docker-build
   variables:
-    IMAGE_DESTINATION: $DOCKER_TEAM_REGISTRY/kafka/fully-managed-connectors-consumer/fully-managed-connectors-consumer:1.0
+    IMAGE_DESTINATION: $DOCKER_TEAM_REGISTRY/kfe/fully-managed-connectors-consumer/fully-managed-connectors-consumer:1.0
   when: manual
 
 #######################################################################################################################
@@ -42,5 +43,39 @@ promote:
   stage: docker
   extends: .docker-promote
   variables:
-    IMAGE_TO_PROMOTE: kafka/fully-managed-connectors-consumer/fully-managed-connectors-consumer:1.0
+    IMAGE_TO_PROMOTE: kfe/fully-managed-connectors-consumer/fully-managed-connectors-consumer:1.0
+  when: manual
+
+#######################################################################################################################
+##                                              DEPLOY STEPS                                                         ##
+#######################################################################################################################
+
+.dev:
+  variables:
+    ENV: dev
+    DEPLOY: dev
+    CONTEXT: dev
+
+.prod:
+  variables:
+    ENV: prod
+    DEPLOY: prod
+    CONTEXT: prod
+
+.deploy:
+  stage: deploy
+  image: $KUBECTL_TOOLBOX_IMAGE
+  script:
+    - >
+      kubectl kustomize --enable-alpha-plugins .k8s/overlays/$ENV |
+      kubectl --context $CONTEXT apply -f -
+  only:
+    - main
+
+0-dev:
+  extends: [.deploy, .dev]
+  when: manual
+
+1-prod:
+  extends: [.deploy, .prod]
   when: manual
