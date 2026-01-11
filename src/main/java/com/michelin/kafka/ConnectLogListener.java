@@ -2,7 +2,6 @@ package com.michelin.kafka;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
@@ -22,10 +21,10 @@ public class ConnectLogListener {
     private static final Logger logger = LoggerFactory.getLogger(ConnectLogListener.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private final io.opentelemetry.api.logs.Logger otelLogger;
-    
-    // Pattern to extract environment from source string like:
-    // crn://confluent.cloud/environment=env-mwvgw/kafka=lkc-kz3jm/connector=lcc-8wypzm
+
+    // Regex to extract environment and connector from the Confluent CRN source string
     private static final Pattern ENV_PATTERN = Pattern.compile("environment=([^/]+)");
+    private static final Pattern CONN_PATTERN = Pattern.compile("connector=([^/]+)");
 
     public ConnectLogListener() {
         this.otelLogger = GlobalOpenTelemetry.get().getLogsBridge().get("com.michelin.kafka.ConnectLogListener");
@@ -34,79 +33,67 @@ public class ConnectLogListener {
     @KafkaListener(topics = "${connect.logs.topic}", groupId = "#{@effectiveGroupId}")
     public void listen(ConsumerRecord<String, String> record) {
         String value = record.value();
-        
-        // standard local logging (won't be exported to Grafana due to configuration)
-        logger.info("Received Connect Log Event: partition={}, offset={}", record.partition(), record.offset());
-        logger.debug("Payload: {}", value);
+        String key = record.key() == null ? "null" : record.key();
+
+        // 1. RESTORE DETAILED SLF4J LOGGING
+        // This makes the console/file output look exactly like your previous logs
+        logger.info("Received Connect Log Event: key={}, value={}, partition={}, offset={}",
+                key, value, record.partition(), record.offset());
 
         try {
             JsonNode rootNode = objectMapper.readTree(value);
-            
-            // Extract core fields
+
             String eventType = rootNode.path("type").asText("unknown");
-            String eventId = rootNode.path("id").asText("unknown");
-            String eventSource = rootNode.path("source").asText("unknown");
+            String eventSource = rootNode.path("source").asText("");
             String eventTime = rootNode.path("time").asText();
-            String environment = extractEnvironment(eventSource);
-            
+
             JsonNode dataNode = rootNode.path("data");
             String level = dataNode.path("level").asText("INFO");
             String connectorId = dataNode.path("context").path("connectorId").asText("unknown");
-            
-            // Construct the structured body
-            ObjectNode logBody = objectMapper.createObjectNode();
-            logBody.put("event_type", eventType);
-            logBody.put("event_id", eventId);
-            logBody.put("event_source", eventSource);
-            logBody.put("event_time", eventTime);
-            logBody.put("environment", environment);
-            logBody.put("connector_id", connectorId);
-            logBody.put("kafka_partition", record.partition());
-            logBody.put("kafka_offset", record.offset());
 
-            String message = "Connect Log Event";
-            
-            // Extract error details if present
+            // Extract Environment and Connector from the source string
+            String environment = "unknown";
+            String connector = "unknown";
+            Matcher envMatcher = ENV_PATTERN.matcher(eventSource);
+            if (envMatcher.find()) environment = envMatcher.group(1);
+            Matcher connMatcher = CONN_PATTERN.matcher(eventSource);
+            if (connMatcher.find()) connector = connMatcher.group(1);
+
+            // 2. BUILD ATTRIBUTES FOR GRAFANA TABLE
+            AttributesBuilder attributes = Attributes.builder()
+                    .put("event.type", eventType)
+                    .put("event.source", eventSource)
+                    .put("event.time", eventTime)
+                    .put("connector.id", connectorId)
+                    .put("connector.name", connector) // For the table
+                    .put("environment", environment)   // For the table
+                    .put("kafka.partition", (long) record.partition())
+                    .put("kafka.offset", record.offset());
+
+            String bodyMessage = "Connect Log Event";
+
             if (dataNode.has("summary")) {
                 JsonNode summary = dataNode.path("summary");
+                // Put the whole summary object as a string for the Grafana table
+                attributes.put("summary", summary.toString());
+
                 if (summary.has("connectorErrorSummary")) {
-                    JsonNode errorSummary = summary.path("connectorErrorSummary");
-                    String errorMsg = errorSummary.path("message").asText("");
-                    String rootCause = errorSummary.path("rootCause").asText("");
-                    
-                    logBody.put("connector_error_message", errorMsg);
-                    logBody.put("connector_error_root_cause", rootCause);
-                    message = errorMsg.isEmpty() ? message : errorMsg;
+                    String errorMsg = summary.path("connectorErrorSummary").path("message").asText("");
+                    bodyMessage = errorMsg.isEmpty() ? bodyMessage : errorMsg;
                 }
             }
-            
-            // Add the human-readable message as well
-            logBody.put("message", message);
 
-            // Map level to Severity
-            Severity severity = mapSeverity(level);
-            
-            // Emit OTel log with JSON Body
+            // Emit OTel log
             otelLogger.logRecordBuilder()
-                .setSeverity(severity)
-                .setSeverityText(level)
-                .setBody(objectMapper.writeValueAsString(logBody))
-                .emit();
-
-            logger.info("OTel log emitted successfully for event: {}", eventId);
+                    .setSeverity(mapSeverity(level))
+                    .setSeverityText(level)
+                    .setBody(bodyMessage)
+                    .setAllAttributes(attributes.build())
+                    .emit();
 
         } catch (Exception e) {
             logger.error("Failed to parse/process connect log event", e);
         }
-    }
-
-    private String extractEnvironment(String source) {
-        if (source == null) return "unknown";
-        Matcher matcher = ENV_PATTERN.matcher(source);
-        if (matcher.find()) {
-            return matcher.group(1);
-        }
-        return "unknown";
     }
 
     private Severity mapSeverity(String level) {
