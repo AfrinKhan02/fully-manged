@@ -45,3 +45,6 @@ local.properties
 
 # Exceptions (if you want to commit the agent, uncomment the next line)
 !opentelemetry-javaagent.jar
+
+# my changes
+.extends

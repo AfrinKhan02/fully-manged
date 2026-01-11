@@ -51,7 +51,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <jvmArguments>
-                        -javaagent:opentelemetry-javaagent.jar
+                        -javaagent:.otel/opentelemetry-javaagent.jar
                         -XX:MaxRAMPercentage=75
                         -XX:+UseParallelGC
                         -XX:ActiveProcessorCount=1

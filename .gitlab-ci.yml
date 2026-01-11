@@ -1,0 +1,46 @@
+include:
+  # https://gitlab.michelin.com/devops-foundation/shared-ci/maven/maven-build
+  - "https://gitlab.michelin.com/api/v4/projects/33347/repository/files/maven_build_container.yml/raw?ref=1.1.0&private_token=$SHARED_CI_TOKEN&v.yaml"
+
+  # https://gitlab.michelin.com/devops-foundation/shared-ci/docker/docker-build
+  - "https://gitlab.michelin.com/api/v4/projects/35474/repository/files/docker_build.yml/raw?ref=1.0.2&private_token=$SHARED_CI_TOKEN&v.yaml"
+
+  # https://gitlab.michelin.com/devops-foundation/shared-ci/k8s/k8s-deploy
+  - "https://gitlab.michelin.com/api/v4/projects/35479/repository/files/k8s_deploy.yml/raw?ref=main&private_token=$SHARED_CI_TOKEN&v.yaml"
+
+stages:
+  - build
+  - docker
+
+build:
+  extends: .maven-build
+  when: manual
+
+#######################################################################################################################
+##                                              DOCKER BUILD STEPS                                                   ##
+#######################################################################################################################
+
+docker:
+  stage: docker
+  extends: .docker-build
+  variables:
+    IMAGE_DESTINATION: $DOCKER_SNAPSHOT_REGISTRY/kafka/fully-managed-connectors-consumer:1.0-SNAPSHOT
+  when: manual
+
+docker-prod:
+  stage: docker
+  extends: .docker-build
+  variables:
+    IMAGE_DESTINATION: $DOCKER_TEAM_REGISTRY/kafka/fully-managed-connectors-consumer/fully-managed-connectors-consumer:1.0
+  when: manual
+
+#######################################################################################################################
+##                                              PROMOTE STEPS                                                        ##
+#######################################################################################################################
+
+promote:
+  stage: docker
+  extends: .docker-promote
+  variables:
+    IMAGE_TO_PROMOTE: kafka/fully-managed-connectors-consumer/fully-managed-connectors-consumer:1.0
+  when: manual

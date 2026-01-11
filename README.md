@@ -54,7 +54,7 @@ The application will automatically load this file if it exists. `secret.env` is 
 
 You can run the application using `java -jar` or `mvn spring-boot:run`.
 
-The application is configured to use the OpenTelemetry Java Agent (`opentelemetry-javaagent.jar`) for sending logs, metrics, and traces to Grafana.
+The application is configured to use the OpenTelemetry Java Agent (`.otel/opentelemetry-javaagent.jar`) for sending logs, metrics, and traces to Grafana.
 
 ### Using Maven (Recommended)
 
@@ -76,7 +76,7 @@ export CLUSTER_API_KEY="<YOUR_API_KEY>"
 export CLUSTER_API_SECRET="<YOUR_API_SECRET>"
 
 JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseParallelGC -XX:ActiveProcessorCount=1 -Djdk.virtualThreadScheduler.parallelism=20 --add-opens java.base/java.time=ALL-UNNAMED -Djava.security.egd=file:/dev/./urandom"
-OTEL_OPTS="-javaagent:opentelemetry-javaagent.jar -Dotel.logs.exporter=otlp -Dotel.metrics.exporter=otlp -Dotel.traces.exporter=otlp -Dotel.exporter.otlp.protocol=grpc -Dotel.exporter.otlp.endpoint=https://otel-eur.michelin.com:443 -Dotel.exporter.otlp.headers=x-scope-orgid=default -Dotel.resource.attributes=service.name=fully-managed-connectors-consumer,service.namespace=kafka,environment=dev -Dotel.javaagent.debug=false"
+OTEL_OPTS="-javaagent:.otel/opentelemetry-javaagent.jar -Dotel.logs.exporter=otlp -Dotel.metrics.exporter=otlp -Dotel.traces.exporter=otlp -Dotel.exporter.otlp.protocol=grpc -Dotel.exporter.otlp.endpoint=https://otel-eur.michelin.com:443 -Dotel.exporter.otlp.headers=x-scope-orgid=default -Dotel.resource.attributes=service.name=fully-managed-connectors-consumer,service.namespace=kafka,environment=dev -Dotel.javaagent.debug=false"
 
 java $JAVA_OPTS $OTEL_OPTS -jar target/fully-managed-connectors-consumer-1.0-SNAPSHOT.jar
 ```
